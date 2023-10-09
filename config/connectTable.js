@@ -1,4 +1,3 @@
-// dbHelpers.js
 const connectDB = require('./connect');
 
 module.exports = {
@@ -7,5 +6,8 @@ module.exports = {
   },
   getTpayment: () => {
     return connectDB.getCollection('tpayments');
+  },
+  getNotify: () => {
+    return connectDB.getCollection('tnotifies');
   },
 };

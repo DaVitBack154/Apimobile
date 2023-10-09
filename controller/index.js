@@ -7,28 +7,6 @@ const db_connectTB = require('../config/connectTable');
 
 module.exports.CreateReqUser = async (req, res) => {
   try {
-    //ต้องส่ง token
-    // const { name, surname, id_card } = req.user;
-    // const {
-    //   no_contract,
-    //   list_req,
-    //   receive_no,
-    //   sent_addressuser,
-    //   sent_emailuser,
-    // } = req.body;
-
-    // let create_req = new CreateReqUser({
-    //   name,
-    //   surname,
-    //   id_card,
-    //   no_contract,
-    //   list_req,
-    //   receive_no,
-    //   sent_emailuser,
-    //   sent_addressuser,
-    // });
-    // let savedReqUser = await create_req.save();
-    // แบบไม่ต้องส่ง
     const datapostUser = await CreateReqUser(req.body).save();
     res.send(datapostUser);
   } catch (error) {
@@ -320,5 +298,17 @@ module.exports.getDateServer = async (req, res) => {
     // ในกรณีที่เกิดข้อผิดพลาด
     console.error(error);
     res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงวันที่และเวลา' });
+  }
+};
+
+module.exports.GetNotify = async (req, res) => {
+  try {
+    let id_card = req.user.id_card;
+    const db_notify = db_connectTB.getNotify();
+    const getnotify = await db_notify.find({ PersonalID: id_card }).toArray();
+    return res.status(200).send({ data: getnotify });
+  } catch (error) {
+    console.log(err);
+    res.status(500).send('Server Error');
   }
 };
