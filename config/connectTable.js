@@ -8,6 +8,6 @@ module.exports = {
     return connectDB.getCollection('tpayments');
   },
   getNotify: () => {
-    return connectDB.getCollection('tnotifies');
+    return connectDB.getCollection('tnotify');
   },
 };

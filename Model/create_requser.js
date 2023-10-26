@@ -13,6 +13,11 @@ const CreateReqUserSchema = mongoose.Schema(
     district: String,
     subdistrict: String,
     postcode: String,
+    status_req: String,
+    name_emp: String,
+    date_sent: Date,
+    remark: String,
+    other: String,
   },
   { timestamps: true }
 );

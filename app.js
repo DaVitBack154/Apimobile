@@ -10,7 +10,7 @@ require('dotenv').config();
 connectDB();
 const path = require('path');
 app.use('/public', express.static(path.join(__dirname, 'public')));
-app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.json());
 app.use(morgan('dev'));
 app.use(
   cors({

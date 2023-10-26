@@ -1,7 +1,8 @@
 // config/connect.js
 const mongoose = require('mongoose');
-const DB_URI = 'mongodb://197.1.1.96:3000/MobileApp'; // แก้ URI ตามที่คุณใช้งาน
-
+// const DB_URI = 'mongodb://127.0.0.1:27017/Mobileapp';
+const DB_URI =
+  'mongodb://chase:Adm1nP%40ssw0rd23!@10.0.143.206:27017/MobileApp?authMechanism=DEFAULT&authSource=MobileApp';
 const connectDB = async () => {
   try {
     await mongoose.connect(DB_URI, {

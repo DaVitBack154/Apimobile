@@ -62,7 +62,8 @@ module.exports.GetPromotionID = async (req, res) => {
   try {
     const id = req.params.id;
     const promotion = await CreatePromotion.findOne({ _id: id }).exec();
-    res.send(promotion);
+    // return res.status(200).send({ data: promotion });
+    return res.json({ status: true, data: promotion });
   } catch (error) {
     console.log(error);
     res.status(500).send('Server Error');

@@ -4,11 +4,55 @@ const CreateReqUser = require('../Model/create_requser');
 const CryptoJS = require('crypto-js');
 const dayjs = require('dayjs');
 const db_connectTB = require('../config/connectTable');
+const { validationResult } = require('express-validator');
+const thaibulksmsApi = require('thaibulksms-api');
+const http = require('http');
 
+const options = {
+  apiKey: process.env.API_KEY,
+  apiSecret: process.env.API_SECRET,
+};
+const otp = thaibulksmsApi.otp(options);
+
+//---------------requser-----------------------------
 module.exports.CreateReqUser = async (req, res) => {
   try {
-    const datapostUser = await CreateReqUser(req.body).save();
-    res.send(datapostUser);
+    let body = req.body;
+    let dataReq = new CreateReqUser({
+      name: body.name,
+      surname: body.surname,
+      id_card: body.id_card,
+      no_contract: body.no_contract,
+      list_req: body.list_req,
+      receive_no: body.receive_no,
+      sent_emailuser: body.sent_emailuser,
+      sent_addressuser: body.sent_addressuser,
+      provin: body.provin,
+      district: body.district,
+      subdistrict: body.subdistrict,
+      postcode: body.postcode,
+      other: body.other,
+      status_req: 'Process',
+      remark: body.remark,
+    });
+    await dataReq.save();
+
+    const updateAdd = {
+      sent_addressuser: dataReq.sent_addressuser,
+      provin: dataReq.provin,
+      district: dataReq.district,
+      subdistrict: dataReq.subdistrict,
+      postcode: dataReq.postcode,
+    };
+    await CreateUser.findOneAndUpdate({ id_card: dataReq.id_card }, updateAdd);
+    return res.json({
+      status: 200,
+      dataReq,
+      message: 'อัปเดตข้อมูลที่อยู่เรียบร้อยแล้ว',
+    });
+    // return res
+    //   .status(200)
+    //   .send({ dataReq, message: 'อัปเดตข้อมูลที่อยู่เรียบร้อยแล้ว' });
   } catch (error) {
     console.log(error);
     res.status(500).send('Server Error');
@@ -24,6 +68,79 @@ module.exports.GetReqUser = async (req, res) => {
     res.status(500).send('Server Error');
   }
 };
+
+module.exports.GetReqUserID = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const getreqID = await CreateReqUser.findOne({ _id: id }).exec();
+    return res.json({ status: 200, data: getreqID });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Server Error');
+  }
+};
+
+module.exports.UpdateReqUserID = async (req, res) => {
+  try {
+    // code
+    const id = req.params.id;
+    // เพิ่มวันที่และเวลาปัจจุบันใน req.body
+    req.body.date_sent = new Date();
+    const updated = await CreateReqUser.findOneAndUpdate(
+      { _id: id },
+      req.body,
+      {
+        new: true,
+      }
+    ).exec();
+    res.send(updated);
+  } catch (err) {
+    // error
+    console.log(err);
+    res.status(500).send('Server Error');
+  }
+};
+//---------------requser-----------------------------
+
+// module.exports.SaveaddressUser = async (req, res) => {
+//   try {
+//     let id_card = req.user.id_card;
+//     let dataProfile = await CreateReqUser.findOne({ id_card: id_card });
+
+//     if (dataProfile.sent_addressuser !== null) {
+//       // ถ้าพบข้อมูลและ sent_addressuser ไม่มีค่าเป็น null หรือว่าง
+//       // ให้ทำการค้นหาและอัปเดตข้อมูลใน table user โดยใช้ id_card เป็นเงื่อนไข
+//       const updateResult = await CreateUser.findOneAndUpdate(
+//         { id_card: id_card },
+//         {
+//           $set: {
+//             sent_addressuser: dataProfile.sent_addressuser,
+//             provin: dataProfile.provin,
+//             district: dataProfile.district,
+//             subdistrict: dataProfile.subdistrict,
+//           },
+//         }
+//       );
+
+//       if (updateResult) {
+//         // ถ้ามีการอัปเดตเรียบร้อย
+//         return res
+//           .status(200)
+//           .send({ updateResult, message: 'อัปเดตข้อมูลที่อยู่เรียบร้อยแล้ว' });
+//       } else {
+//         // ถ้าไม่มีการอัปเดต (ไม่พบข้อมูลที่ต้องการอัปเดต)
+//         return res.send('ไม่พบข้อมูลที่ต้องการอัปเดต');
+//       }
+//     } else {
+//       return res.send(
+//         'ไม่พบข้อมูลผู้ใช้หรือ sent_addressuser เป็น null หรือว่าง'
+//       );
+//     }
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).send('Server Error');
+//   }
+// };
 
 module.exports.register = async (req, res) => {
   try {
@@ -134,6 +251,83 @@ module.exports.login = async (req, res) => {
     return res.status(401).send({ message: 'User Invalid!' });
   }
 };
+
+//==========OTP Data========================
+module.exports.requestOTP = async (req, res) => {
+  const phoneNumber = req.body.phoneNumber;
+  var body = `<?xml version="1.0" encoding="TIS-620"?>
+  <message>
+      <sms type="mt">
+          <service-id>2325301101
+          </service-id>
+          <destination>
+              <address>
+                  <number type="international">${phoneNumber}</number>
+              </address>
+          </destination>
+          <source>
+              <address>
+                  <number type="abbreviated">40002397
+                  </number>
+                  <originate type="international">66942135643
+                  </originate>
+                  <sender>ARMA</sender>
+              </address>
+          </source>
+          <ud type="text" encoding="default">เลขรหัส OTP ของคุณคือ:</ud>
+          <scts>2009-05-21T11:05:29+07:00</scts>
+          <dro>true</dro>
+      </sms>
+  </message>`;
+  const contentLength = Buffer.byteLength(body); // คำนวณความยาวของข้อมูล XML
+
+  var postRequest = {
+    host: '119.46.177.99',
+    path: '/',
+    port: 55000,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/xml',
+      'Content-Length': contentLength, // ใช้ค่า contentLength ที่คำนวณ
+      Connection: 'Keep-Alive',
+      Authorization: 'Basic MjMyNTMwMTEwMTpOY01AQjIxN0wlRXh1Y0YK',
+    },
+  };
+
+  const request = http.request(postRequest, function (response) {
+    console.log(response.statusCode);
+    let buffer = '';
+    response.on('data', function (data) {
+      buffer += data;
+    });
+    response.on('end', function () {
+      console.log(buffer);
+    });
+  });
+
+  request.on('error', function (e) {
+    console.log('problem with request: ' + e.message);
+  });
+
+  request.write(body);
+  request.end();
+};
+
+module.exports.verifyOTP = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  try {
+    let token = req.body.token;
+    let otpCode = req.body.otp_code;
+    const response = await otp.verify(token, otpCode);
+    res.json(response.data);
+  } catch (error) {
+    return res.status(500).json({ errors: error });
+  }
+};
+//==========OTP Data========================
 
 module.exports.getprofile = async (req, res) => {
   try {
