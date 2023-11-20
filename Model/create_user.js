@@ -21,6 +21,7 @@ const CreateUserSchema = mongoose.Schema(
     district: String,
     subdistrict: String,
     postcode: String,
+    device: String,
   },
   { timestamps: true }
 );

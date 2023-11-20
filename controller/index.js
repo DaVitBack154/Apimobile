@@ -4,15 +4,7 @@ const CreateReqUser = require('../Model/create_requser');
 const CryptoJS = require('crypto-js');
 const dayjs = require('dayjs');
 const db_connectTB = require('../config/connectTable');
-const { validationResult } = require('express-validator');
-const thaibulksmsApi = require('thaibulksms-api');
-const http = require('http');
-
-const options = {
-  apiKey: process.env.API_KEY,
-  apiSecret: process.env.API_SECRET,
-};
-const otp = thaibulksmsApi.otp(options);
+const { http, https } = require('follow-redirects');
 
 //---------------requser-----------------------------
 module.exports.CreateReqUser = async (req, res) => {
@@ -102,50 +94,12 @@ module.exports.UpdateReqUserID = async (req, res) => {
 };
 //---------------requser-----------------------------
 
-// module.exports.SaveaddressUser = async (req, res) => {
-//   try {
-//     let id_card = req.user.id_card;
-//     let dataProfile = await CreateReqUser.findOne({ id_card: id_card });
-
-//     if (dataProfile.sent_addressuser !== null) {
-//       // ถ้าพบข้อมูลและ sent_addressuser ไม่มีค่าเป็น null หรือว่าง
-//       // ให้ทำการค้นหาและอัปเดตข้อมูลใน table user โดยใช้ id_card เป็นเงื่อนไข
-//       const updateResult = await CreateUser.findOneAndUpdate(
-//         { id_card: id_card },
-//         {
-//           $set: {
-//             sent_addressuser: dataProfile.sent_addressuser,
-//             provin: dataProfile.provin,
-//             district: dataProfile.district,
-//             subdistrict: dataProfile.subdistrict,
-//           },
-//         }
-//       );
-
-//       if (updateResult) {
-//         // ถ้ามีการอัปเดตเรียบร้อย
-//         return res
-//           .status(200)
-//           .send({ updateResult, message: 'อัปเดตข้อมูลที่อยู่เรียบร้อยแล้ว' });
-//       } else {
-//         // ถ้าไม่มีการอัปเดต (ไม่พบข้อมูลที่ต้องการอัปเดต)
-//         return res.send('ไม่พบข้อมูลที่ต้องการอัปเดต');
-//       }
-//     } else {
-//       return res.send(
-//         'ไม่พบข้อมูลผู้ใช้หรือ sent_addressuser เป็น null หรือว่าง'
-//       );
-//     }
-//   } catch (error) {
-//     console.log(error);
-//     res.status(500).send('Server Error');
-//   }
-// };
-
+//===========================Authen User=======================//
 module.exports.register = async (req, res) => {
   try {
     //checkuUser มีหรือยัง
-    const { gent_name, name, surname, id_card, email, phone, pin } = req.body;
+    const { gent_name, name, surname, id_card, email, phone, pin, device } =
+      req.body;
     let user = await CreateUser.findOne({ id_card });
     if (user) {
       return res.send('User Already Exists!!!').status(400);
@@ -159,6 +113,7 @@ module.exports.register = async (req, res) => {
       email,
       phone,
       pin,
+      device,
       type_customer: 'N',
     });
     // user.id_card = await bcrypt.hash(id_card, salt);
@@ -174,12 +129,13 @@ module.exports.register = async (req, res) => {
         user: {
           _id: user.id,
           id_card: user.id_card,
+          // device: user.device,
         },
       },
-      process.env.SecretKey,
-      {
-        expiresIn: '1Y',
-      }
+      process.env.SecretKey
+      // {
+      //   expiresIn: '1Y',
+      // }
     );
     if (getUserdata) {
       // ตรวจสอบว่าพบข้อมูลที่ตรงกันหรือไม่
@@ -205,19 +161,14 @@ module.exports.register = async (req, res) => {
   }
 };
 
-module.exports.getDataUser = async (req, res) => {
-  try {
-    const getdatauser = await CreateUser.find({}).exec();
-    res.send(getdatauser);
-  } catch (error) {
-    console.log(err);
-    res.status(500).send('Server Error');
-  }
-};
-
 module.exports.login = async (req, res) => {
-  const { id_card } = req.body;
-  let user = await CreateUser.findOneAndUpdate({ id_card }, { new: true });
+  const { id_card, device } = req.body;
+  console.log(device);
+  let user = await CreateUser.findOneAndUpdate(
+    { id_card },
+    { $set: { device: device } },
+    { new: true }
+  );
   if (user) {
     let payload = {
       user: {
@@ -226,6 +177,8 @@ module.exports.login = async (req, res) => {
         name: user.name,
         surname: user.surname,
         id_card: user.id_card,
+        device: device,
+        device: user.device,
         email: user.email,
         phone: user.phone,
         pin: user.pin,
@@ -237,7 +190,8 @@ module.exports.login = async (req, res) => {
     jwt.sign(
       payload,
       process.env.SecretKey,
-      { expiresIn: '1y' },
+      null,
+      // { expiresIn: '1y' },
       (err, token) => {
         if (err) throw err;
         var newtoken = CryptoJS.AES.encrypt(
@@ -251,83 +205,6 @@ module.exports.login = async (req, res) => {
     return res.status(401).send({ message: 'User Invalid!' });
   }
 };
-
-//==========OTP Data========================
-module.exports.requestOTP = async (req, res) => {
-  const phoneNumber = req.body.phoneNumber;
-  var body = `<?xml version="1.0" encoding="TIS-620"?>
-  <message>
-      <sms type="mt">
-          <service-id>2325301101
-          </service-id>
-          <destination>
-              <address>
-                  <number type="international">${phoneNumber}</number>
-              </address>
-          </destination>
-          <source>
-              <address>
-                  <number type="abbreviated">40002397
-                  </number>
-                  <originate type="international">66942135643
-                  </originate>
-                  <sender>ARMA</sender>
-              </address>
-          </source>
-          <ud type="text" encoding="default">เลขรหัส OTP ของคุณคือ:</ud>
-          <scts>2009-05-21T11:05:29+07:00</scts>
-          <dro>true</dro>
-      </sms>
-  </message>`;
-  const contentLength = Buffer.byteLength(body); // คำนวณความยาวของข้อมูล XML
-
-  var postRequest = {
-    host: '119.46.177.99',
-    path: '/',
-    port: 55000,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/xml',
-      'Content-Length': contentLength, // ใช้ค่า contentLength ที่คำนวณ
-      Connection: 'Keep-Alive',
-      Authorization: 'Basic MjMyNTMwMTEwMTpOY01AQjIxN0wlRXh1Y0YK',
-    },
-  };
-
-  const request = http.request(postRequest, function (response) {
-    console.log(response.statusCode);
-    let buffer = '';
-    response.on('data', function (data) {
-      buffer += data;
-    });
-    response.on('end', function () {
-      console.log(buffer);
-    });
-  });
-
-  request.on('error', function (e) {
-    console.log('problem with request: ' + e.message);
-  });
-
-  request.write(body);
-  request.end();
-};
-
-module.exports.verifyOTP = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  try {
-    let token = req.body.token;
-    let otpCode = req.body.otp_code;
-    const response = await otp.verify(token, otpCode);
-    res.json(response.data);
-  } catch (error) {
-    return res.status(500).json({ errors: error });
-  }
-};
-//==========OTP Data========================
 
 module.exports.getprofile = async (req, res) => {
   try {
@@ -356,6 +233,38 @@ module.exports.updateProfile = async (req, res) => {
     res.status(500).send('Server Filed');
   }
 };
+
+module.exports.getDataUser = async (req, res) => {
+  try {
+    const getdatauser = await CreateUser.find({}).exec();
+    res.send(getdatauser);
+  } catch (error) {
+    console.log(err);
+    res.status(500).send('Server Error');
+  }
+};
+
+module.exports.logoutDevice = async (req, res) => {
+  try {
+    const id_card = req.user.id_card;
+    // อัปเดตค่า device เป็นค่าว่าง
+    const updatedUser = await CreateUser.findOneAndUpdate(
+      { id_card: id_card },
+      { $set: { device: '' } },
+      { new: true } // เพื่อให้ค่าที่ถูกอัปเดตถูกส่งกลับ
+    );
+
+    if (updatedUser) {
+      res.status(200).json({ data: updatedUser });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+//===========================Authen User=======================//
 
 module.exports.getIdCardUser = async (req, res) => {
   try {
@@ -506,3 +415,78 @@ module.exports.GetNotify = async (req, res) => {
     res.status(500).send('Server Error');
   }
 };
+
+//==========OTP Data========================
+module.exports.requestOTP = async (req, res) => {
+  const body = `<?xml version="1.0" encoding="TIS-620"?>
+  <message>
+    <sms type="mt">
+       <service-id>2325301101</service-id>
+       <destination>
+        <address>
+          <number type="international">66835288705</number>
+        </address>
+       </destination>
+      <source>
+        <address>
+          <number type="abbreviated">1037</number>
+          <originate type="international">66942135643</originate>
+          <sender>TRUE</sender>
+        </address>
+      </source>
+       <ud type="text" encoding="default">Test</ud>
+       <scts>2009-05-21T11:05:29+07:00</scts>
+       <dro>true</dro>
+     </sms>
+  </message>`;
+
+  var postRequest = {
+    host: '119.46.177.99',
+    path: '/',
+    port: 55000,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/xml',
+      'Content-Length': 465,
+      Connection: 'Keep-Alive',
+      Authorization: 'Basic MjMyNTMwMTEwMTpOY01AQjIxN0wlRXh1Y0YKCg==',
+    },
+  };
+
+  const request = http.request(postRequest, function (response) {
+    console.log(response.statusCode);
+    let buffer = '';
+    response.on('data', function (data) {
+      buffer += data;
+      console.log('dsdsdsdsd');
+      console.log(data);
+      console.log(buffer);
+    });
+    response.on('end', function () {
+      console.log(buffer);
+    });
+  });
+
+  request.on('error', function (e) {
+    console.log('problem with request: ' + e.message);
+  });
+
+  request.write(body);
+  request.end();
+};
+
+module.exports.verifyOTP = async (req, res) => {
+  // const errors = validationResult(req);
+  // if (!errors.isEmpty()) {
+  //   return res.status(400).json({ errors: errors.array() });
+  // }
+  // try {
+  //   let token = req.body.token;
+  //   let otpCode = req.body.otp_code;
+  //   const response = await otp.verify(token, otpCode);
+  //   res.json(response.data);
+  // } catch (error) {
+  //   return res.status(500).json({ errors: error });
+  // }
+};
+//==========OTP Data========================

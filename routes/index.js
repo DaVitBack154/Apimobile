@@ -5,9 +5,11 @@ const Promotion_controller = require('../controller/promotion');
 const { auth } = require('../Middleware/auth');
 const upload = require('../Middleware/multerimg');
 const Notify_controller = require('../controller/notify');
+const Salehome_controller = require('../controller/salehome.js');
 
 route.post('/register', Member_controller.register);
 route.post('/login', Member_controller.login);
+route.put('/logout', auth, Member_controller.logoutDevice);
 route.get('/getprofile', auth, Member_controller.getprofile);
 route.put('/updateprofile/:id', Member_controller.updateProfile);
 route.put('/getpin/:id', Member_controller.getpin);
@@ -40,6 +42,13 @@ route.get('/getnotifyall', Notify_controller.GetNotifyAll);
 route.get('/getnotify_id', auth, Notify_controller.GetNotifyByID);
 route.put('/updatenotify', auth, Notify_controller.UpdateAllNoti);
 // ============================Notify========================
+
+//==========================SaleHome================================
+route.post('/createsalehome', Salehome_controller.CreateSalehome);
+route.get('/getsalehome', Salehome_controller.GetSalehome);
+route.get('/getsalehome/:id', Salehome_controller.GetSaleHomeID);
+route.put('/updatesalehome/:id', Salehome_controller.UpdateSaleHome);
+//==========================SaleHome================================
 
 route.post('/request-otp', Member_controller.requestOTP);
 route.post('/verify-otp', Member_controller.verifyOTP);

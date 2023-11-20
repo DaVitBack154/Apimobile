@@ -23,7 +23,7 @@ readdirSync('./routes').map((e) => {
   return app.use(require('./routes/' + e));
 });
 
-const port = 5700;
+const port = 5500;
 app.listen(port, () => {
   console.log('Api run on Port', port);
 });
