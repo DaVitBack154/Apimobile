@@ -4,16 +4,15 @@ const CreateSaleHome = require('../Model/create_salehome');
 module.exports.CreateSalehome = async (req, res) => {
   try {
     let salehome = req.body;
-    if (req.file) {
-      salehome.file = req.file.filename;
-    }
-
     const newSaleData = new CreateSaleHome({
+      number_home: salehome.number_home,
       img_show: salehome.img_show,
       name_home: salehome.name_home,
+      province: salehome.province,
       location_home: salehome.location_home,
       price_home: salehome.price_home,
       detail_home: salehome.detail_home,
+      img_all: salehome.img_all,
       status_home: 'ON',
     });
 
@@ -66,14 +65,26 @@ module.exports.UpdateSaleHome = async (req, res) => {
   }
 };
 
-module.exports.uploadImage = async (req, res) => {
-  if (req.file) {
-    return res.send({
-      status: true,
-      message: 'อัพโหลดรูปภาพสำเร็จ',
-      data: { filename: req.file.filename, path: req.file.path },
+module.exports.uploadImageArr = async (req, res) => {
+  try {
+    if (req.files && req.files.length > 0) {
+      const filenames = req.files.map((file) => file.filename);
+      return res.status(200).json({
+        status: true,
+        message: 'อัพโหลดรูปภาพสำเร็จ',
+        data: { selectedImages: filenames },
+      });
+    } else {
+      return res.status(400).json({
+        status: false,
+        message: 'ไม่พบรูปภาพที่อัพโหลด',
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      status: false,
+      message: 'เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ',
     });
-  } else {
-    return res.send({ status: false, message: 'อัพโหลดรูปภาพล้มเหลว' });
   }
 };

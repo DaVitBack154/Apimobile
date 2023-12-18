@@ -22,6 +22,12 @@ const CreateUserSchema = mongoose.Schema(
     subdistrict: String,
     postcode: String,
     device: String,
+    yomrub1: String,
+    yomrub2: String,
+    yomrub3: String,
+    starpoint: String,
+    comment: String,
+    status_star: String,
   },
   { timestamps: true }
 );

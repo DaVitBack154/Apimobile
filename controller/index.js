@@ -4,7 +4,8 @@ const CreateReqUser = require('../Model/create_requser');
 const CryptoJS = require('crypto-js');
 const dayjs = require('dayjs');
 const db_connectTB = require('../config/connectTable');
-const { http, https } = require('follow-redirects');
+const CreateOtp = require('../Model/create_otp');
+const axios = require('axios');
 
 //---------------requser-----------------------------
 module.exports.CreateReqUser = async (req, res) => {
@@ -40,11 +41,11 @@ module.exports.CreateReqUser = async (req, res) => {
     return res.json({
       status: 200,
       dataReq,
-      message: 'อัปเดตข้อมูลที่อยู่เรียบร้อยแล้ว',
+      message: 'อัปเดตmessageที่อยู่เรียบร้อยแล้ว',
     });
     // return res
     //   .status(200)
-    //   .send({ dataReq, message: 'อัปเดตข้อมูลที่อยู่เรียบร้อยแล้ว' });
+    //   .send({ dataReq, message: 'อัปเดตmessageที่อยู่เรียบร้อยแล้ว' });
   } catch (error) {
     console.log(error);
     res.status(500).send('Server Error');
@@ -98,8 +99,19 @@ module.exports.UpdateReqUserID = async (req, res) => {
 module.exports.register = async (req, res) => {
   try {
     //checkuUser มีหรือยัง
-    const { gent_name, name, surname, id_card, email, phone, pin, device } =
-      req.body;
+    const {
+      gent_name,
+      name,
+      surname,
+      id_card,
+      email,
+      phone,
+      pin,
+      device,
+      yomrub1,
+      yomrub2,
+      yomrub3,
+    } = req.body;
     let user = await CreateUser.findOne({ id_card });
     if (user) {
       return res.send('User Already Exists!!!').status(400);
@@ -114,6 +126,10 @@ module.exports.register = async (req, res) => {
       phone,
       pin,
       device,
+      yomrub1,
+      yomrub2,
+      yomrub3,
+      status_star: 'N',
       type_customer: 'N',
     });
     // user.id_card = await bcrypt.hash(id_card, salt);
@@ -138,7 +154,7 @@ module.exports.register = async (req, res) => {
       // }
     );
     if (getUserdata) {
-      // ตรวจสอบว่าพบข้อมูลที่ตรงกันหรือไม่
+      // ตรวจสอบว่าพบmessageที่ตรงกันหรือไม่
       user.type_customer = 'Y';
       await user.save();
 
@@ -148,7 +164,7 @@ module.exports.register = async (req, res) => {
       ).toString();
       return res.status(200).send({ user, token: newtoken });
     } else {
-      // ถ้าไม่พบข้อมูลที่ตรงกัน
+      // ถ้าไม่พบmessageที่ตรงกัน
       var newtoken = CryptoJS.AES.encrypt(
         token, //jwt
         process.env.SecretKey // key env
@@ -183,6 +199,7 @@ module.exports.login = async (req, res) => {
         phone: user.phone,
         pin: user.pin,
         type_customer: user.type_customer,
+        status_star: user.type_customer,
       },
     };
 
@@ -228,6 +245,26 @@ module.exports.updateProfile = async (req, res) => {
       new: true,
     }).exec();
     res.send(updated);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Server Filed');
+  }
+};
+
+module.exports.updateStartUser = async (req, res) => {
+  try {
+    const id = req.params.id;
+    const newStatus = req.body.status_star;
+    const updatedstar = await CreateUser.findOneAndUpdate(
+      { _id: id },
+      req.body,
+      { status_star: newStatus },
+      {
+        new: true,
+      }
+    ).exec();
+    console.log('Updated document:', updatedstar);
+    res.send(updatedstar);
   } catch (error) {
     console.log(error);
     res.status(500).send('Server Filed');
@@ -364,19 +401,19 @@ module.exports.getpin = async (req, res) => {
   try {
     const id = req.params.id; // สมมติว่ารับ id มาจาก parameter
 
-    // ค้นหาข้อมูล CreateUser ด้วย _id ที่ระบุ
+    // ค้นหาmessage CreateUser ด้วย _id ที่ระบุ
     const dataProfile = await CreateUser.findOne({ _id: id });
 
     if (!dataProfile) {
       return res.status(404).send('User not found');
     }
     const userEnteredPin = req.body.pin; // สมมติว่ารับ pin ที่ผู้ใช้กรอกเข้ามา
-    // ส่งข้อมูล pin กลับไปให้ client
+    // ส่งmessage pin กลับไปให้ client
     if (userEnteredPin !== dataProfile.pin) {
-      return res.status(401).send('pin ไม่ถูกต้อง'); // กรณี pin ไม่ตรงกับในฐานข้อมูล
+      return res.status(401).send('pin ไม่ถูกต้อง'); // กรณี pin ไม่ตรงกับในฐานmessage
     }
 
-    // ส่งข้อมูล pin กลับไปให้ client หลังที่ตรวจสอบ pin ถูกต้องแล้ว
+    // ส่งmessage pin กลับไปให้ client หลังที่ตรวจสอบ pin ถูกต้องแล้ว
     return res
       .status(200)
       .send({ pin: dataProfile.pin, message: 'pin ถูกต้อง' });
@@ -394,13 +431,13 @@ module.exports.getDateServer = async (req, res) => {
     // รูปแบบวันที่และเวลาตามที่คุณต้องการ
     const formattedDate = currentDate.format('YYYY-MM-DD HH:mm:ss');
 
-    // ส่งข้อมูลกลับไปยัง client
+    // ส่งmessageกลับไปยัง client
     return res.status(200).send({ data: formattedDate });
     // res.json({ currentDate: formattedDate });
   } catch (error) {
-    // ในกรณีที่เกิดข้อผิดพลาด
+    // ในกรณีที่เกิดmessage
     console.error(error);
-    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการดึงวันที่และเวลา' });
+    res.status(500).json({ error: 'เกิดmessageในการดึงวันที่และเวลา' });
   }
 };
 
@@ -417,76 +454,167 @@ module.exports.GetNotify = async (req, res) => {
 };
 
 //==========OTP Data========================
+
 module.exports.requestOTP = async (req, res) => {
-  const body = `<?xml version="1.0" encoding="TIS-620"?>
-  <message>
-    <sms type="mt">
-       <service-id>2325301101</service-id>
-       <destination>
-        <address>
-          <number type="international">66835288705</number>
-        </address>
-       </destination>
-      <source>
-        <address>
-          <number type="abbreviated">1037</number>
-          <originate type="international">66942135643</originate>
-          <sender>TRUE</sender>
-        </address>
-      </source>
-       <ud type="text" encoding="default">Test</ud>
-       <scts>2009-05-21T11:05:29+07:00</scts>
-       <dro>true</dro>
-     </sms>
-  </message>`;
+  try {
+    const userPhoneNumber = req.body.phone;
+    // const userPhoneNumber = '66960841988';
+    const randomCode = generateRandomCode();
 
-  var postRequest = {
-    host: '119.46.177.99',
-    path: '/',
-    port: 55000,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/xml',
-      'Content-Length': 465,
-      Connection: 'Keep-Alive',
-      Authorization: 'Basic MjMyNTMwMTEwMTpOY01AQjIxN0wlRXh1Y0YKCg==',
-    },
-  };
+    const xmlData = generateXmlData(userPhoneNumber, randomCode);
 
-  const request = http.request(postRequest, function (response) {
-    console.log(response.statusCode);
-    let buffer = '';
-    response.on('data', function (data) {
-      buffer += data;
-      console.log('dsdsdsdsd');
-      console.log(data);
-      console.log(buffer);
-    });
-    response.on('end', function () {
-      console.log(buffer);
-    });
-  });
+    try {
+      // ทำการ POST XML ไปยัง URL และรับ response
+      const apiResponse = await callApiAndSaveData(
+        xmlData,
+        userPhoneNumber,
+        randomCode
+      );
 
-  request.on('error', function (e) {
-    console.log('problem with request: ' + e.message);
-  });
+      // ดำเนินการต่อไปตามต้องการ
+      console.log(apiResponse, 'รายละเอียดข้อมูลจาก API');
 
-  request.write(body);
-  request.end();
+      return res.json({ status: true, message: apiResponse });
+    } catch (error) {
+      // จัดการmessage
+      console.error(error, 'messageจาก API');
+
+      return res.json({ status: false, message: error });
+    }
+  } catch (error) {
+    // จัดการmessage
+    const errorMessage = error.response
+      ? error.response.data
+      : 'messageที่ไม่รู้จัก';
+    console.error(errorMessage, 'messageจาก API');
+
+    return res.json({ status: false, message: errorMessage });
+  }
 };
+
+const generateRandomCode = () => {
+  return Math.floor(100000 + Math.random() * 900000)
+    .toString()
+    .padStart(6, '0');
+};
+
+const generateXmlData = (userPhoneNumber, randomCode) => {
+  return `<?xml version="1.0" encoding="TIS-620"?>
+    <message>
+      <sms type="mt">
+         <service-id>2325301101</service-id>
+         <destination>
+          <address>
+            <number type="international">${userPhoneNumber}</number>
+          </address>
+         </destination>
+        <source>
+          <address>
+            <number type="abbreviated">40002397</number>
+            <originate type="international">66942135643</originate>
+            <sender>ARMA</sender>
+          </address>
+        </source>
+         <ud type="text" encoding="unicode">&#3619;&#3627;&#3633;&#3626;&#32;&#79;&#84;&#80;&#32;&#3586;&#3629;&#3591;&#3588;&#3640;&#3603;&#3588;&#3639;&#3629;&#32; ${randomCode}</ud>
+         <scts>2009-05-21T11:05:29+07:00</scts>
+         <dro>true</dro>
+       </sms>
+    </message>`;
+};
+
+const callApiAndSaveData = async (xmlData, userPhoneNumber, randomCode) => {
+  try {
+    // ทำการ POST XML ไปยัง URL
+    const response = await axios.post('http://119.46.177.99:55000/', xmlData, {
+      headers: {
+        'Content-Type': 'text/xml',
+        Authorization: 'Basic MjMyNTMwMTEwMTpOY01AQjIxN0wlRXh1Y0Y=',
+      },
+    });
+
+    // เอาmessageเข้า database
+    const dataOTP = new CreateOtp({
+      phone: userPhoneNumber,
+      otp: randomCode,
+      status: 'Y',
+    });
+    await dataOTP.save();
+
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : 'messageที่ไม่รู้จัก';
+  }
+};
+
+// module.exports.verifyOTP = async (req, res) => {
+//   const { otp, phone } = req.body;
+//   // ค้นหาข้อมูลล่าสุดที่มี status เป็น 'Y' และ phone เป็นตามที่รับมา
+//   let user = await CreateOtp.findOne({ status: 'Y', phone }).sort({
+//     createdAt: -1,
+//   });
+//   // ตรวจสอบว่า user ไม่เป็น null และ otp ตรงกับที่รับมา
+//   if (user && user.otp === otp) {
+//     return res.json({ status: true, data: user });
+//   }
+
+//   res.status(401).json({ status: false, message: 'รหัส OTP ไม่ถูกต้อง' });
+// };
+const OTP_EXPIRATION_TIME = 2 * 60 * 1000; // 3 นาที
 
 module.exports.verifyOTP = async (req, res) => {
-  // const errors = validationResult(req);
-  // if (!errors.isEmpty()) {
-  //   return res.status(400).json({ errors: errors.array() });
-  // }
-  // try {
-  //   let token = req.body.token;
-  //   let otpCode = req.body.otp_code;
-  //   const response = await otp.verify(token, otpCode);
-  //   res.json(response.data);
-  // } catch (error) {
-  //   return res.status(500).json({ errors: error });
-  // }
+  const { otp, phone } = req.body;
+
+  try {
+    // ค้นหาข้อมูลล่าสุดที่มี status เป็น 'Y' และ phone เป็นตามที่รับมา
+    let latestUser = await CreateOtp.findOne({ phone }).sort({ createdAt: -1 });
+
+    // ตรวจสอบว่ามีข้อมูลล่าสุดหรือไม่
+    if (!latestUser) {
+      return res.status(403).json({
+        status: false,
+        message: 'ไม่พบข้อมูล OTP สำหรับหมายเลขโทรศัพท์นี้',
+      });
+    }
+
+    // ตรวจสอบว่า otp ตรงกับที่รับมา และ status เป็น 'Y'
+    if (latestUser.otp === otp && latestUser.status === 'Y') {
+      // ตรวจสอบว่ารหัส OTP หมดอายุหรือไม่
+      const currentTime = new Date().getTime();
+      const otpTime = new Date(latestUser.createdAt).getTime();
+
+      if (currentTime - otpTime > OTP_EXPIRATION_TIME) {
+        // รหัส OTP หมดอายุ
+        await CreateOtp.updateMany(
+          { phone, status: 'N', _id: { $ne: latestUser._id } },
+          { status: 'N' }
+        );
+
+        return res
+          .status(403)
+          .json({ status: false, message: 'รหัส OTP หมดอายุ' });
+      }
+
+      // รหัส OTP ถูกต้อง และไม่หมดอายุ
+      return res.json({ status: true, data: latestUser });
+    } else {
+      res.status(403).json({ status: false, message: 'รหัส OTP ไม่ถูกต้อง' });
+    }
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ status: false, message: 'เกิดข้อผิดพลาดในการตรวจสอบ OTP' });
+  }
 };
+
+module.exports.getPhoneOTP = async (req, res) => {
+  try {
+    const phonereq = await CreateOtp.find({}).exec();
+    return res.status(200).send({ data: phonereq });
+  } catch (error) {
+    console.log(error);
+    res.status(500).send('Server Error');
+  }
+};
+
 //==========OTP Data========================

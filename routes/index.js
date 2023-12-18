@@ -6,9 +6,11 @@ const { auth } = require('../Middleware/auth');
 const upload = require('../Middleware/multerimg');
 const Notify_controller = require('../controller/notify');
 const Salehome_controller = require('../controller/salehome.js');
+const uploadMiddleware = require('../Middleware/multerimgall.js');
 
 route.post('/register', Member_controller.register);
 route.post('/login', Member_controller.login);
+route.put('/updatestar/:id', Member_controller.updateStartUser);
 route.put('/logout', auth, Member_controller.logoutDevice);
 route.get('/getprofile', auth, Member_controller.getprofile);
 route.put('/updateprofile/:id', Member_controller.updateProfile);
@@ -52,11 +54,18 @@ route.put('/updatesalehome/:id', Salehome_controller.UpdateSaleHome);
 
 route.post('/request-otp', Member_controller.requestOTP);
 route.post('/verify-otp', Member_controller.verifyOTP);
+route.get('/getphome', Member_controller.getPhoneOTP);
 
 route.post(
   '/upload/image',
   upload.single('image'),
   Promotion_controller.uploadImage
+);
+
+route.post(
+  '/upload/img_all',
+  uploadMiddleware.array('image', 20),
+  Salehome_controller.uploadImageArr
 );
 
 module.exports = route;
